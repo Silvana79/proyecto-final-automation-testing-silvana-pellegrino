@@ -1,117 +1,124 @@
+
 import logging
 
-from selenium.webdriver.common.by import By
+from pages.login_page import LoginPage
+from pages.inventory_page import InventoryPage
+from pages.cart_page import CartPage
 
-from utils.saucedemo import (
-    BASE_URL,
-    add_first_product_to_cart,
-    get_first_product,
-    login,
-    open_cart,
-    wait_for_element,
-)
+from utils.data_reader import get_user, load_products
+
 
 logger = logging.getLogger(__name__)
 
 
 def test_login_exitoso(driver):
-    driver.get(BASE_URL)
+    login_page = LoginPage(driver)
+    inventory_page = InventoryPage(driver)
 
-    login(driver)
+    user = get_user("valid_user")
+
+    login_page.open()
+    login_page.login(user["username"], user["password"])
+
+    inventory_page.wait_until_loaded()
 
     assert "/inventory.html" in driver.current_url
-    assert driver.title == "Swag Labs"
+    assert inventory_page.get_page_title() == "Products"
 
-    products_title = wait_for_element(
-        driver,
-        (By.CLASS_NAME, "title")
+    logger.info("Login exitoso.")
+
+
+def test_login_con_credenciales_invalidas(driver):
+    login_page = LoginPage(driver)
+
+    user = get_user("invalid_user")
+
+    login_page.open()
+    login_page.login(user["username"], user["password"])
+
+    error_message = login_page.get_error_message()
+
+    assert error_message == (
+        "Epic sadface: Username and password do not match "
+        "any user in this service"
     )
 
-    assert products_title.text == "Products"
+    logger.info("Credenciales inválidas rechazadas correctamente.")
 
-    print("Test OK")
 
-    logger.info(
-        "Login exitoso. URL actual: %s",
-        driver.current_url
+def test_login_usuario_bloqueado(driver):
+    login_page = LoginPage(driver)
+
+    user = get_user("locked_user")
+
+    login_page.open()
+    login_page.login(user["username"], user["password"])
+
+    error_message = login_page.get_error_message()
+
+    assert error_message == (
+        "Epic sadface: Sorry, this user has been locked out."
     )
+
+    logger.info("Usuario bloqueado correctamente identificado.")
 
 
 def test_catalogo_inventario(driver):
-    driver.get(BASE_URL)
+    login_page = LoginPage(driver)
+    inventory_page = InventoryPage(driver)
 
-    login(driver)
+    user = get_user("valid_user")
+    expected_products = load_products()
 
-    assert driver.title == "Swag Labs"
+    login_page.open()
+    login_page.login(user["username"], user["password"])
 
-    first_product = wait_for_element(
-        driver,
-        (By.CLASS_NAME, "inventory_item")
-    )
+    inventory_page.wait_until_loaded()
 
-    assert first_product.is_displayed()
+    assert inventory_page.get_page_title() == "Products"
 
-    product_name, product_price = get_first_product(driver)
+    product_name, product_price = inventory_page.get_first_product()
 
     assert product_name.strip() != ""
     assert product_price.startswith("$")
 
-    print(
-        f"Primer producto: {product_name} | "
-        f"Precio: {product_price}"
-    )
+    # Comparamos el primer producto del sitio
+    # con el primer registro del archivo CSV.
+    assert product_name == expected_products[0]["name"]
+    assert product_price == expected_products[0]["price"]
 
     logger.info(
-        "Primer producto: %s | Precio: %s",
+        "Producto validado: %s | Precio: %s",
         product_name,
         product_price
     )
 
-    menu_button = wait_for_element(
-        driver,
-        (By.ID, "react-burger-menu-btn")
-    )
-
-    assert menu_button.is_displayed()
-
-    filter_select = wait_for_element(
-        driver,
-        (By.CLASS_NAME, "product_sort_container")
-    )
-
-    assert filter_select.is_displayed()
-
 
 def test_carrito_primer_producto(driver):
-    driver.get(BASE_URL)
+    login_page = LoginPage(driver)
+    inventory_page = InventoryPage(driver)
+    cart_page = CartPage(driver)
 
-    login(driver)
+    user = get_user("valid_user")
 
-    product_name, _ = get_first_product(driver)
+    login_page.open()
+    login_page.login(user["username"], user["password"])
 
-    add_first_product_to_cart(driver)
+    inventory_page.wait_until_loaded()
 
+    product_name, product_price = inventory_page.get_first_product()
 
-    cart_badge = wait_for_element(
-        driver,
-        (By.CLASS_NAME, "shopping_cart_badge")
-    )
+    inventory_page.add_first_product_to_cart()
 
-    assert cart_badge.text == "1"
+    assert inventory_page.get_cart_quantity() == "1"
 
-    open_cart(driver)
+    inventory_page.open_cart()
+    cart_page.wait_until_loaded()
 
-    cart_item = wait_for_element(
-        driver,
-        (By.CLASS_NAME, "cart_item")
-    )
+    assert "/cart.html" in driver.current_url
+    assert cart_page.get_page_title() == "Your Cart"
+    assert cart_page.get_products_count() == 1
+    assert cart_page.get_first_product_name() == product_name
+    assert cart_page.get_first_product_price() == product_price
 
-    assert cart_item.is_displayed()
-
-    cart_product_name = cart_item.find_element(
-        By.CLASS_NAME,
-        "inventory_item_name"
-    ).text
-
-    assert cart_product_name == product_name
-    
+    logger.info("Producto agregado y verificado en el carrito.")

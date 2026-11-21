@@ -1,3 +1,4 @@
+
 from datetime import datetime
 from pathlib import Path
 
@@ -7,8 +8,13 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-REPORTS_DIR = Path("reports")
+
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+REPORTS_DIR = PROJECT_DIR / "reports"
 SCREENSHOTS_DIR = REPORTS_DIR / "screenshots"
+
+# Crear las carpetas necesarias automáticamente.
+REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @pytest.fixture
@@ -25,9 +31,10 @@ def driver():
 
     browser.implicitly_wait(0)
 
-    yield browser
-
-    browser.quit()
+    try:
+        yield browser
+    finally:
+        browser.quit()
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -35,12 +42,14 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
 
+    # Tomar captura solamente cuando falla la ejecución de una prueba.
     if report.when != "call" or not report.failed:
         return
 
-    driver = item.funcargs.get("driver")
+    # Las pruebas API no tienen navegador.
+    browser = item.funcargs.get("driver")
 
-    if driver is None:
+    if browser is None:
         return
 
     SCREENSHOTS_DIR.mkdir(
@@ -48,9 +57,7 @@ def pytest_runtest_makereport(item, call):
         exist_ok=True
     )
 
-    timestamp = datetime.now().strftime(
-        "%Y%m%d_%H%M%S"
-    )
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     safe_test_name = "".join(
         character
@@ -65,9 +72,6 @@ def pytest_runtest_makereport(item, call):
     )
 
     try:
-        driver.save_screenshot(
-            str(screenshot_path)
-        )
+        browser.save_screenshot(str(screenshot_path))
     except Exception:
         pass
-        
