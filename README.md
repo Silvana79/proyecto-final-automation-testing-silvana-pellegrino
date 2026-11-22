@@ -56,7 +56,7 @@ La lectura de datos externos se centraliza en utilidades específicas, mientras 
 ## Estructura del proyecto
 
 ```text
-pre-entrega-automation-testing-silvana-pellegrino/
+proyecto-final-automation-testing-silvana-pellegrino/
 ├── pages/
 │   ├── __init__.py
 │   ├── login_page.py
@@ -92,8 +92,8 @@ pre-entrega-automation-testing-silvana-pellegrino/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/Silvana79/pre-entrega-automation-testing-silvana-pellegrino.git
-cd pre-entrega-automation-testing-silvana-pellegrino
+git clone https://github.com/Silvana79/proyecto-final-automation-testing-silvana-pellegrino.git
+cd proyecto-final-automation-testing-silvana-pellegrino
 ```
 
 ### 2. Crear el entorno virtual
@@ -164,4 +164,4 @@ Invoke-Item .\reports\reporte.html
 
 GitHub:
 
-https://github.com/Silvana79/pre-entrega-automation-testing-silvana-pellegrino
+https://github.com/Silvana79/proyecto-final-automation-testing-silvana-pellegrino
