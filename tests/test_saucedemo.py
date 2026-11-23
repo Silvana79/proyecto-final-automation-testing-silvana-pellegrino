@@ -1,14 +1,24 @@
 
 import logging
+import pytest
 
 from pages.login_page import LoginPage
 from pages.inventory_page import InventoryPage
 from pages.cart_page import CartPage
 
-from utils.data_reader import get_user, load_products
+from utils.data_reader import get_user, load_products, load_users
 
 
 logger = logging.getLogger(__name__)
+
+
+# Obtener los usuarios negativos desde users.json.
+# Cada perfil genera una ejecución independiente en Pytest.
+NEGATIVE_USERS = [
+    pytest.param(user_type, user_data, id=user_type)
+    for user_type, user_data in load_users().items()
+    if "expected_error" in user_data
+]
 
 
 def test_login_exitoso(driver):
@@ -28,39 +38,27 @@ def test_login_exitoso(driver):
     logger.info("Login exitoso.")
 
 
-def test_login_con_credenciales_invalidas(driver):
+@pytest.mark.parametrize(
+    "user_type, user_data",
+    NEGATIVE_USERS
+)
+def test_login_parametrizado(driver, user_type, user_data):
     login_page = LoginPage(driver)
 
-    user = get_user("invalid_user")
-
     login_page.open()
-    login_page.login(user["username"], user["password"])
+    login_page.login(
+        user_data["username"],
+        user_data["password"]
+    )
 
     error_message = login_page.get_error_message()
 
-    assert error_message == (
-        "Epic sadface: Username and password do not match "
-        "any user in this service"
+    assert error_message == user_data["expected_error"]
+
+    logger.info(
+        "Login rechazado correctamente para el perfil: %s",
+        user_type
     )
-
-    logger.info("Credenciales inválidas rechazadas correctamente.")
-
-
-def test_login_usuario_bloqueado(driver):
-    login_page = LoginPage(driver)
-
-    user = get_user("locked_user")
-
-    login_page.open()
-    login_page.login(user["username"], user["password"])
-
-    error_message = login_page.get_error_message()
-
-    assert error_message == (
-        "Epic sadface: Sorry, this user has been locked out."
-    )
-
-    logger.info("Usuario bloqueado correctamente identificado.")
 
 
 def test_catalogo_inventario(driver):
@@ -82,8 +80,8 @@ def test_catalogo_inventario(driver):
     assert product_name.strip() != ""
     assert product_price.startswith("$")
 
-    # Comparamos el primer producto del sitio
-    # con el primer registro del archivo CSV.
+    # Comparar el primer producto del sitio con el primer
+    # registro del archivo CSV.
     assert product_name == expected_products[0]["name"]
     assert product_price == expected_products[0]["price"]
 

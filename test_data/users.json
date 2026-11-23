@@ -1,4 +1,3 @@
-
 {
     "valid_user": {
         "username": "standard_user",
@@ -6,10 +5,12 @@
     },
     "invalid_user": {
         "username": "usuario_invalido",
-        "password": "clave_incorrecta"
+        "password": "clave_incorrecta",
+        "expected_error": "Epic sadface: Username and password do not match any user in this service"
     },
     "locked_user": {
         "username": "locked_out_user",
-        "password": "secret_sauce"
+        "password": "secret_sauce",
+        "expected_error": "Epic sadface: Sorry, this user has been locked out."
     }
 }
